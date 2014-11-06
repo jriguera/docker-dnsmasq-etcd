@@ -74,7 +74,7 @@ class EtcdLeases:
         try:
             leases = self.client.get(self.etcd_keyroot + self.etcd_devices)
         except KeyError:
-            pass
+            self.client.write(self.etcd_keyroot + self.etcd_devices, dir=True)
         for l in leases.leaves:
             try:
                 ip = self.client.get(l.key + self.etcd_ip)
