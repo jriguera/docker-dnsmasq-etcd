@@ -180,7 +180,7 @@ def main():
     parser.add_argument('--etcd-port', action='store', type=int, default=etcd_port, help='Etcd port')
     parser.add_argument('--etcd-proto', action='store', default=etcd_proto, help='Etcd protocol')
     subparsers = parser.add_subparsers(help='commands')
-    # nit command
+    # Init command
     init_parser = subparsers.add_parser('init', help='List contents')
     init_parser.set_defaults(func=init, configuration=config)
     # Add lease
@@ -209,6 +209,3 @@ def main():
 if __name__ == "__main__":
     rc = main()
     sys.exit(rc)
-
-
-
