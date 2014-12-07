@@ -27,27 +27,25 @@ RUN apt-get install -y python python-dev python-pip
 # Dependencies for python-etcd
 RUN apt-get install -y python-openssl libffi-dev libssl-dev
 
-# Clean
-RUN apt-get clean
-
 # Get pip to download and install requirements:
 RUN pip install python-etcd
 
-# Install pipework 
-ADD https://raw.githubusercontent.com/jpetazzo/pipework/master/pipework /usr/bin/
-RUN chmod 0755 /usr/bin/pipework
-ENV PIPEWORK_BIN /usr/bin/pipework
+# prepare to run
+ADD etcd-leases.py /usr/bin/
+ADD bin/ /usr/bin/
+ADD confd/ /etc/confd/
+ADD init/ /etc/my_init.d/
 
-# Install confd
-ADD https://github.com/kelseyhightower/confd/releases/download/v0.7.0-beta1/confd-0.7.0-linux-amd64 /usr/bin/confd
-RUN chmod 0755 /usr/bin/confd
+# Enable or disable pipework by defining the location 
+#ENV PIPEWORK_BIN /usr/bin/pipework
 ENV CONFD_BIN /usr/bin/confd
 
-# prepare to run
-ADD confd/ /etc/confd/
-ADD etcd_leases.py /usr/bin/
-RUN chmod 0755 /usr/bin/etcd_leases.py
-ADD init/ /etc/my_init.d/
+# runinit
+RUN mkdir /etc/service/confd
+ADD confd.sh /etc/service/confd/run
+RUN mkdir /etc/service/dnsmasq
+ADD dnsmasq.sh /etc/service/dnsmasq/run
+
 EXPOSE 53
 
 # Use baseimage-docker's init system.
