@@ -27,7 +27,7 @@ bind-interfaces
 
 # For debugging purposes, log each DNS query as it passes through
 # dnsmasq.
-#log-queries
+log-queries
 
 # Log lots of extra information about DHCP transactions.
 #log-dhcp
@@ -53,12 +53,6 @@ no-resolv
 # address->name queries for 192.168.3/24 to nameserver 10.1.2.3
 #server=/3.168.192.in-addr.arpa/10.1.2.3
 
-# Add local-only domains here, queries in these domains are answered
-# from /etc/hosts or DHCP only.
-{{if exists "/ipmi/dnsmasq/domain"}}
-local=/{{getv "/ipmi/dnsmasq/domain"}}/
-{{end}}
-
 # Set the domain for dnsmasq. this is optional, but if it is set, it
 # does the following things.
 # 1) Allows DHCP hosts to have fully qualified domain names, as long
@@ -67,7 +61,9 @@ local=/{{getv "/ipmi/dnsmasq/domain"}}/
 #    domain of all systems configured by DHCP
 # 3) Provides the domain part for "expand-hosts"
 {{if exists "/ipmi/dnsmasq/domain"}}
-domain={{getv "/ipmi/dnsmasq/domain"}}
+domain=/{{ getv "/ipmi/dnsmasq/domain" }}/
+{{else}}
+domain=/ipmi.net/
 {{end}}
 
 # If you don't want dnsmasq to read /etc/hosts, uncomment the
@@ -86,16 +82,9 @@ no-hosts
 # This is an example of a DHCP range with a network-id, so that
 # some DHCP options may be set only for this network.
 
-dhcp-range=ipmi,192.168.0.50,192.168.0.150,255.255.255.0,infinite
-
+dhcp-range=ipmi,{{if exists "/ipmi/dnsmasq/dhcp_start"}}{{getv "/ipmi/dnsmasq/dhcp_start"}}{{else}}{{"192.168.0.50"}}{{end}},{{if exists "/ipmi/dnsmasq/dhcp_end"}}{{getv "/ipmi/dnsmasq/dhcp_end"}}{{else}}{{"192.168.0.150"}}{{end}},{{if exists "/ipmi/dnsmasq/dhcp_mask"}}{{getv "/ipmi/dnsmasq/dhcp_mask"}}{{else}}{{"255.255.255.0"}}{{end}},{{if exists "/ipmi/dnsmasq/dhcp_time"}}{{getv "/ipmi/dnsmasq/dhcp_time"}}{{else}}{{"infinite"}}{{end}}
 
 #########################################################################
-
-# If this line is uncommented, dnsmasq will read /etc/ethers and act
-# on the ethernet-address/IP pairs found there just as if they had
-# been given as --dhcp-host options. Useful if you keep
-# MAC-address/host mappings there for other purposes.
-#read-ethers
 
 # Send options to hosts which ask for a DHCP lease.
 # See RFC 2132 for details of available options.
@@ -117,7 +106,11 @@ dhcp-range=ipmi,192.168.0.50,192.168.0.150,255.255.255.0,infinite
 # route at all. Note that this only works for the options sent by
 # default (1, 3, 6, 12, 28) the same line will send a zero-length option 
 # for all other option numbers.
+{{if exists "/ipmi/dnsmasq/dhcp_route"}}
+dhcp-option=3,{{ getv "/ipmi/dnsmasq/dhcp_route" }}
+{{else}}
 dhcp-option=3
+{{end}}
 
 # Set the NTP time server addresses to 192.168.0.4 and 10.10.0.5
 #dhcp-option=option:ntp-server,192.168.0.4,10.10.0.5
@@ -134,8 +127,8 @@ dhcp-option=3
 # Specify an option which will only be sent to the "red" network
 # (see dhcp-range for the declaration of the "red" network)
 # Note that the net: part must precede the option: part.
-dhcp-option = net:ipmi,option:ntp-server,0.0.0.0
-
+#dhcp-option = net:ipmi,option:ntp-server,0.0.0.0
+#
 # The following DHCP options set up dnsmasq in the same way as is specified
 # for the ISC dhcpcd in
 # http://www.samba.org/samba/ftp/docs/textdocs/DHCP-Server-Configuration.txt
@@ -147,9 +140,15 @@ dhcp-option = net:ipmi,option:ntp-server,0.0.0.0
 #dhcp-option=45,0.0.0.0     # netbios datagram distribution server
 #dhcp-option=46,8           # netbios node type
 #dhcp-option=47             # empty netbios scope.
+#
+{{if exists "/ipmi/dnsmasq/dhcp_options"}}
+{{range getvs "/ipmi/dnsmasq/dhcp_options/*"}}
+dhcp-option={{ . }}
+{{end}}
+{{end}}
+
 
 #########################################################################
-
 
 # In the default mode, dnsmasq inserts the unqualified names of DHCP clients 
 # into the DNS. For this reason, the names must be unique, even if two 
@@ -195,7 +194,7 @@ dhcp-authoritative
 # The arguments sent to the script are "add" or "del", 
 # then the MAC address, the IP address and finally the hostname
 # if there is one. 
-dhcp-script=/usr/bin/etcd_leases.py
+dhcp-script=/usr/bin/etcd-leases.py
 
 # Set the dns memory cachesize here.
 cache-size=1024
@@ -203,9 +202,3 @@ cache-size=1024
 # If you want to disable negative caching, uncomment this.
 no-negcache
 
-# If you want to fix up DNS results from upstream servers, use the
-# alias option. This only works for IPv4.
-# This alias makes a result of 1.2.3.4 appear as 5.6.7.8
-#alias=1.2.3.4,5.6.7.8
-# and this maps 1.2.3.x to 5.6.7.x
-#alias=1.2.3.0,5.6.7.0,255.255.255.0
